@@ -14,7 +14,7 @@ public class CertificateTest
         long id = (long)(Random.Shared.NextDouble() * long.MaxValue);
 
         DatCertificate newCert = Generate(id, signatureAlgorithm, cryptoAlgorithm);
-        string newCertStr = newCert.Exports(DatSignatureKeyOutOption.FULL);
+        string newCertStr = newCert.Exports(DatSignatureKeyExportOption.PAIR);
         DatCertificate readCert = DatCertificate.Parse(newCertStr);
         TestContext.Progress.WriteLine($"{tag} CERT: {newCertStr}");
 

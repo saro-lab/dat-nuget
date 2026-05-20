@@ -22,13 +22,13 @@ public class DatCertificate : ICloneable
     public bool Expired => IssueEnd + Ttl < Unixtime.Now();
     public bool Issuable => SignatureKey.HasSigningKey() && Unixtime.Now() >= IssueBegin && Unixtime.Now() <= IssueEnd;
 
-    public string Exports(DatSignatureKeyOutOption option)
+    public string Exports(DatSignatureKeyExportOption option)
     {
         string skBase64 = option switch
         {
-            DatSignatureKeyOutOption.FULL => $"{DatUtils.EncodeBase64Url(SignatureKey.GetSigningKeyBytes()!)}~{DatUtils.EncodeBase64Url(SignatureKey.GetVerifyingKeyBytes())}",
-            DatSignatureKeyOutOption.SIGNING => DatUtils.EncodeBase64Url(SignatureKey.GetSigningKeyBytes()!),
-            DatSignatureKeyOutOption.VERIFYING => $"~{DatUtils.EncodeBase64Url(SignatureKey.GetVerifyingKeyBytes())}",
+            DatSignatureKeyExportOption.PAIR => $"{DatUtils.EncodeBase64Url(SignatureKey.GetSigningKeyBytes()!)}~{DatUtils.EncodeBase64Url(SignatureKey.GetVerifyingKeyBytes())}",
+            DatSignatureKeyExportOption.SIGNING => DatUtils.EncodeBase64Url(SignatureKey.GetSigningKeyBytes()!),
+            DatSignatureKeyExportOption.VERIFYING => $"~{DatUtils.EncodeBase64Url(SignatureKey.GetVerifyingKeyBytes())}",
             _ => throw new ArgumentOutOfRangeException(nameof(option))
         };
 
