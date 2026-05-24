@@ -8,18 +8,23 @@
 
 ### [C# Example](https://dat.saro.me/--/libs/nuget-saro-dat)
 
-## support signature algorithm
-| name   | algorithm  |
-|--------|------------|
-| P256   | secp256r1  |
-| P384   | secp384r1  |
-| P521   | secp521r1  |
+## Support algorithm
+### Signature
+| name            | note                  |
+|-----------------|-----------------------|
+| ECDSA-P256      | = secp256r1           |
+| ECDSA-P384      | = secp384r1           |
+| ECDSA-P521      | = secp521r1           |
+| HMAC-SHA256-MFS | = 256Bit Fixed Secret |
+| HMAC-SHA384-MFS | = 384Bit Fixed Secret |
+| HMAC-SHA512-MFS | = 512Bit Fixed Secret |
+- MFS : Maximum(Same Bit) Fixed Secret
 
-## support crypto algorithm
-| name       | algorithm                   |
-|------------|-----------------------------|
-| AES128GCMN | aes-128-gcm n(nonce + body) |
-| AES256GCMN | aes-256-cbc n(nonce + body) |
+### Crypto
+| name       | note                          |
+|------------|-------------------------------|
+| IV-AES128-GCM | (IV=NONCE:96BIT) + AES128 GCM |
+| IV-AES256-GCM | (IV=NONCE:96BIT) + AES256 GCM |
 
 
 # Performance
@@ -27,34 +32,58 @@
 - mac mini m4 2024 basic (10 core)
 - [BenchTest.cs](Saro.Dat.Tests/BenchTest.cs)
 ```
-Plain : UViKg7RdJcd7kHYfjcoFfVVgXqw0So5HopBX0Dl6ClRHc1EHeV9yfhKYEJs3DYabOgKYN3XBIc2LnFz4mGlp6nnavug3UsC1NWAc
-Secure : iQfttVVSmonZmafoz7SVOBBkpe3lQ3DAdLXZRfID8GcF15kH0LFnfrLv7WHCaUZx1HiDHhqBcPsMEnZBZud1SdX3yDs6NsojEb7g
+Plain : gvtC1jHD5aNdaNmsbmEQbSqCj5mncD8dJ1jvEMcwEmwEejrzGtxNNDgf9YdQ0ff8YWhLQ2GJNnwegUp39NFuOrlKkyzBXEBnS0me
+Secure : vUQGM107ZTOLNuquwMClampmJfcc4isNlieu7YmFCDZ6GShgldKHVTJBGefVHbFaj1gIwN65hE9ljedZz6a6fKijxNSZzzy4xTjc
 
 Multi-Thread
-P256 AES128GCMN Issue * 10000 : 216ms
-P256 AES128GCMN Parse * 10000 : 196ms
-P256 AES256GCMN Issue * 10000 : 207ms
-P256 AES256GCMN Parse * 10000 : 195ms
-P384 AES128GCMN Issue * 10000 : 532ms
-P384 AES128GCMN Parse * 10000 : 500ms
-P384 AES256GCMN Issue * 10000 : 527ms
-P384 AES256GCMN Parse * 10000 : 500ms
-P521 AES128GCMN Issue * 10000 : 1417ms
-P521 AES128GCMN Parse * 10000 : 1483ms
-P521 AES256GCMN Issue * 10000 : 1490ms
-P521 AES256GCMN Parse * 10000 : 1446ms
+HmacSha256Mfs IvAes128Gcm Issue * 10000 : 25ms
+HmacSha256Mfs IvAes128Gcm Parse * 10000 : 16ms
+HmacSha256Mfs IvAes256Gcm Issue * 10000 : 17ms
+HmacSha256Mfs IvAes256Gcm Parse * 10000 : 17ms
+HmacSha384Mfs IvAes128Gcm Issue * 10000 : 18ms
+HmacSha384Mfs IvAes128Gcm Parse * 10000 : 18ms
+HmacSha384Mfs IvAes256Gcm Issue * 10000 : 19ms
+HmacSha384Mfs IvAes256Gcm Parse * 10000 : 18ms
+HmacSha512Mfs IvAes128Gcm Issue * 10000 : 18ms
+HmacSha512Mfs IvAes128Gcm Parse * 10000 : 19ms
+HmacSha512Mfs IvAes256Gcm Issue * 10000 : 24ms
+HmacSha512Mfs IvAes256Gcm Parse * 10000 : 16ms
+EcdsaP256 IvAes128Gcm Issue * 10000 : 209ms
+EcdsaP256 IvAes128Gcm Parse * 10000 : 198ms
+EcdsaP256 IvAes256Gcm Issue * 10000 : 219ms
+EcdsaP256 IvAes256Gcm Parse * 10000 : 199ms
+EcdsaP384 IvAes128Gcm Issue * 10000 : 547ms
+EcdsaP384 IvAes128Gcm Parse * 10000 : 505ms
+EcdsaP384 IvAes256Gcm Issue * 10000 : 573ms
+EcdsaP384 IvAes256Gcm Parse * 10000 : 508ms
+EcdsaP521 IvAes128Gcm Issue * 10000 : 1470ms
+EcdsaP521 IvAes128Gcm Parse * 10000 : 1477ms
+EcdsaP521 IvAes256Gcm Issue * 10000 : 1498ms
+EcdsaP521 IvAes256Gcm Parse * 10000 : 1678ms
 
 Single-Thread
-P256 AES128GCMN Issue * 10000 : 903ms
-P256 AES128GCMN Parse * 10000 : 802ms
-P256 AES256GCMN Issue * 10000 : 870ms
-P256 AES256GCMN Parse * 10000 : 800ms
-P384 AES128GCMN Issue * 10000 : 2220ms
-P384 AES128GCMN Parse * 10000 : 2194ms
-P384 AES256GCMN Issue * 10000 : 2223ms
-P384 AES256GCMN Parse * 10000 : 2205ms
-P521 AES128GCMN Issue * 10000 : 6091ms
-P521 AES128GCMN Parse * 10000 : 6048ms
-P521 AES256GCMN Issue * 10000 : 6001ms
-P521 AES256GCMN Parse * 10000 : 5981ms
+HmacSha256Mfs IvAes128Gcm Issue * 10000 : 43ms
+HmacSha256Mfs IvAes128Gcm Parse * 10000 : 44ms
+HmacSha256Mfs IvAes256Gcm Issue * 10000 : 48ms
+HmacSha256Mfs IvAes256Gcm Parse * 10000 : 44ms
+HmacSha384Mfs IvAes128Gcm Issue * 10000 : 51ms
+HmacSha384Mfs IvAes128Gcm Parse * 10000 : 52ms
+HmacSha384Mfs IvAes256Gcm Issue * 10000 : 53ms
+HmacSha384Mfs IvAes256Gcm Parse * 10000 : 51ms
+HmacSha512Mfs IvAes128Gcm Issue * 10000 : 51ms
+HmacSha512Mfs IvAes128Gcm Parse * 10000 : 46ms
+HmacSha512Mfs IvAes256Gcm Issue * 10000 : 50ms
+HmacSha512Mfs IvAes256Gcm Parse * 10000 : 51ms
+EcdsaP256 IvAes128Gcm Issue * 10000 : 890ms
+EcdsaP256 IvAes128Gcm Parse * 10000 : 810ms
+EcdsaP256 IvAes256Gcm Issue * 10000 : 873ms
+EcdsaP256 IvAes256Gcm Parse * 10000 : 822ms
+EcdsaP384 IvAes128Gcm Issue * 10000 : 2235ms
+EcdsaP384 IvAes128Gcm Parse * 10000 : 2161ms
+EcdsaP384 IvAes256Gcm Issue * 10000 : 2246ms
+EcdsaP384 IvAes256Gcm Parse * 10000 : 2160ms
+EcdsaP521 IvAes128Gcm Issue * 10000 : 6032ms
+EcdsaP521 IvAes128Gcm Parse * 10000 : 6060ms
+EcdsaP521 IvAes256Gcm Issue * 10000 : 6076ms
+EcdsaP521 IvAes256Gcm Parse * 10000 : 6065ms
 ```

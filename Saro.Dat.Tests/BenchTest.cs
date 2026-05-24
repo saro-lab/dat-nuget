@@ -14,7 +14,7 @@ public class BenchTest
 
         foreach (var cert in certificates)
         {
-            string pre = $"{cert.SignatureKey.Algorithm()} {cert.CryptoKey.Algorithm()} ";
+            string pre = $"{cert.Signature.Algorithm()} {cert.Crypto.Algorithm()} ";
 
             var sw = Stopwatch.StartNew();
             string[] dats = new string[loop];
@@ -35,7 +35,7 @@ public class BenchTest
             TestContext.Progress.WriteLine($"{pre}Issue * {dats.Length} : {sw.ElapsedMilliseconds}ms");
 
             sw.Restart();
-            DatPayload[] payloads = new DatPayload[loop];
+            Payload[] payloads = new Payload[loop];
             string targetDat = dats[0];
 
             if (multiThread)
@@ -74,11 +74,11 @@ public class BenchTest
             .SelectMany(sa => Enum.GetValues<DatCryptoAlgorithm>()
                 .Select(ca => DatCertificate.Generate(
                     0,
-                    sa,
-                    ca,
                     now - 10,
-                    now + 600,
-                    60
+                    600,
+                    60,
+                    sa,
+                    ca
                 ))
             ).ToList();
 

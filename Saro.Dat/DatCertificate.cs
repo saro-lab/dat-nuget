@@ -3,40 +3,33 @@ namespace Saro.Dat;
 public class DatCertificate : ICloneable
 {
     public long Cid { get; }
-    internal IDatSignatureKey SignatureKey { get; }
-    internal IDatCryptoKey CryptoKey { get; }
+    internal IDatSignature Signature { get; }
+    internal IDatCrypto Crypto { get; }
     public long IssueBegin { get; }
     public long IssueEnd { get; }
     public long Ttl { get; }
 
-    private DatCertificate(long cid, IDatSignatureKey sk, IDatCryptoKey ck, long ib, long ie, long ttl)
+    private DatCertificate(long cid, IDatSignature sk, IDatCrypto ck, long ib, long ie, long ttl)
     {
         Cid = cid;
-        SignatureKey = sk;
-        CryptoKey = ck;
+        Signature = sk;
+        Crypto = ck;
         IssueBegin = ib;
         IssueEnd = ie;
         Ttl = ttl;
     }
 
     public bool Expired => IssueEnd + Ttl < Unixtime.Now();
-    public bool Issuable => SignatureKey.HasSigningKey() && Unixtime.Now() >= IssueBegin && Unixtime.Now() <= IssueEnd;
+    public bool Issuable => Signature.Signable() && Unixtime.Now() >= IssueBegin && Unixtime.Now() <= IssueEnd;
 
-    public string Exports(DatSignatureKeyExportOption option)
+    public string Exports(bool verifyOnly = false)
     {
-        string skBase64 = option switch
-        {
-            DatSignatureKeyExportOption.PAIR => $"{DatUtils.EncodeBase64Url(SignatureKey.GetSigningKeyBytes()!)}~{DatUtils.EncodeBase64Url(SignatureKey.GetVerifyingKeyBytes())}",
-            DatSignatureKeyExportOption.SIGNING => DatUtils.EncodeBase64Url(SignatureKey.GetSigningKeyBytes()!),
-            DatSignatureKeyExportOption.VERIFYING => $"~{DatUtils.EncodeBase64Url(SignatureKey.GetVerifyingKeyBytes())}",
-            _ => throw new ArgumentOutOfRangeException(nameof(option))
-        };
-
-        string cryptKeyBase64 = DatUtils.EncodeBase64Url(CryptoKey.ToBytes());
-        return $"{Cid:x}.{SignatureKey.Algorithm()}.{skBase64}.{CryptoKey.Algorithm()}.{cryptKeyBase64}.{IssueBegin}.{IssueEnd}.{Ttl}";
+        return $"{Cid:x}.{IssueBegin}.{IssueEnd - IssueBegin}.{Ttl}.{Signature.Algorithm().ToText()}.{Crypto.Algorithm().ToText()}.{DatUtils.EncodeBase64Url(Signature.ExportKey(verifyOnly))}.{DatUtils.EncodeBase64Url(Crypto.ToBytes())}";
     }
 
-    public object Clone() => new DatCertificate(Cid, (IDatSignatureKey)SignatureKey.Clone(), (IDatCryptoKey)CryptoKey.Clone(), IssueBegin, IssueEnd, Ttl);
+    public override string ToString() => Exports(false);
+
+    public object Clone() => new DatCertificate(Cid, Signature.Clone(), Crypto.Clone(), IssueBegin, IssueEnd, Ttl);
 
     public override bool Equals(object? obj)
     {
@@ -46,21 +39,28 @@ public class DatCertificate : ICloneable
 
     public override int GetHashCode() => Cid.GetHashCode();
 
-    public static DatCertificate Generate(long cid, DatSignatureAlgorithm sa, DatCryptoAlgorithm ca, long ib, long ie, long ttl)
+    public static DatCertificate Generate(long cid, long issuedAt, long issuanceDuration, long datTtl, DatSignatureAlgorithm sa, DatCryptoAlgorithm ca)
     {
-        return new DatCertificate(
+        return New(
             cid,
-            IDatSignatureKey.Generate(sa),
-            IDatCryptoKey.Generate(ca),
-            ib,
-            ie,
-            ttl
+            issuedAt,
+            issuanceDuration,
+            datTtl,
+            IDatSignature.Generate(sa),
+            IDatCrypto.Generate(ca)
         );
     }
 
-    public static DatCertificate New(long cid, IDatSignatureKey sk, IDatCryptoKey ck, long ib, long ie, long ttl)
+    public static DatCertificate New(long cid, long issuedAt, long issuanceDuration, long datTtl, IDatSignature sk, IDatCrypto ck)
     {
-        return new DatCertificate(cid, sk, ck, ib, ie, ttl);
+        if (issuedAt < 0) throw new DatException("issuedAt must >= 0");
+        if (datTtl < 1) throw new DatException("datTtl must > 0");
+        // Kotlin logic: if (issuanceDuration < (datTtl * 2UL) && issuanceDuration < (datTtl + 3600UL))
+        if (issuanceDuration < (datTtl * 2) && issuanceDuration < (datTtl + 3600))
+        {
+            throw new DatException("issuanceDuration must > (datTtl * 2) or (datTtl + 3600)");
+        }
+        return new DatCertificate(cid, sk, ck, issuedAt, issuedAt + issuanceDuration, datTtl);
     }
 
     public static DatCertificate Parse(string format)
@@ -68,35 +68,24 @@ public class DatCertificate : ICloneable
         try
         {
             var p = format.Split('.');
-            if (p.Length != 8) throw new DatException("Invalid Dat Certificate Format");
-
-            long cid = Convert.ToInt64(p[0], 16);
-            var sigAlg = Enum.Parse<DatSignatureAlgorithm>(p[1]);
-
-            var skParts = p[2].Split('~');
-            IDatSignatureKey sigKey;
-            if (skParts.Length == 2)
+            if (p.Length == 8)
             {
-                sigKey = IDatSignatureKey.FromBytes(sigAlg, DatUtils.DecodeBase64Url(skParts[0]), DatUtils.DecodeBase64Url(skParts[1]));
-            }
-            else if (skParts.Length == 1)
-            {
-                if (p[2].StartsWith('~'))
-                    sigKey = IDatSignatureKey.FromBytes(sigAlg, null, DatUtils.DecodeBase64Url(p[2][1..]));
-                else
-                    sigKey = IDatSignatureKey.FromBytes(sigAlg, DatUtils.DecodeBase64Url(skParts[0]), Array.Empty<byte>());
-            }
-            else throw new DatException("Invalid Dat Signature Key Format");
+                long cid = Convert.ToInt64(p[0], 16);
+                long issuedAt = long.Parse(p[1]);
+                long issuanceDuration = long.Parse(p[2]);
+                long datTtl = long.Parse(p[3]);
+                var sigAlg = DatSignatureAlgorithmExtensions.FromText(p[4]);
+                var cryAlg = DatCryptoAlgorithmExtensions.FromText(p[5]);
+                var sigKey = IDatSignature.FromKey(sigAlg, DatUtils.DecodeBase64Url(p[6]));
+                var cryKey = IDatCrypto.FromBytes(cryAlg, DatUtils.DecodeBase64Url(p[7]));
 
-            var cryAlg = Enum.Parse<DatCryptoAlgorithm>(p[3]);
-            var cryKey = IDatCryptoKey.FromBytes(cryAlg, DatUtils.DecodeBase64Url(p[4]));
-
-            return new DatCertificate(cid, sigKey, cryKey, long.Parse(p[5]), long.Parse(p[6]), long.Parse(p[7]));
+                return New(cid, issuedAt, issuanceDuration, datTtl, sigKey, cryKey);
+            }
         }
         catch (System.Exception e)
         {
             if (e is DatException) throw;
-            throw new DatException("Invalid Dat Signature Format");
         }
+        throw new DatException("Invalid Dat Certificate Format");
     }
 }

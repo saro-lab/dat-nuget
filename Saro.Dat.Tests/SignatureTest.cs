@@ -7,14 +7,14 @@ public class SignatureTest
     private void Unit(DatSignatureAlgorithm alg)
     {
         var body = Encoding.UTF8.GetBytes(DatUtils.GenerateRandomBase62(100));
-        var signatureKey = IDatSignatureKey.Generate(alg);
-        var signatureKeyFail = IDatSignatureKey.Generate(alg);
+        var signatureKey = IDatSignature.Generate(alg);
+        var signatureKeyFail = IDatSignature.Generate(alg);
 
-        var signingKeyBytes = signatureKey.GetSigningKeyBytes();
-        var verifyingKeyBytes = signatureKey.GetVerifyingKeyBytes();
+        var allKeyBytes = signatureKey.ExportKey(false);
+        var verifyingKeyBytes = signatureKey.ExportKey(true);
 
-        var signatureKeyFrom = IDatSignatureKey.FromBytes(alg, signingKeyBytes, verifyingKeyBytes);
-        var verifyKeyFrom = IDatSignatureKey.FromBytes(alg, null, verifyingKeyBytes);
+        var signatureKeyFrom = IDatSignature.FromKey(alg, allKeyBytes);
+        var verifyKeyFrom = IDatSignature.FromKey(alg, verifyingKeyBytes);
 
         var sign = signatureKeyFrom.Sign(body);
 
@@ -29,7 +29,7 @@ public class SignatureTest
     {
         foreach (DatSignatureAlgorithm algorithm in Enum.GetValues<DatSignatureAlgorithm>())
         {
-            TestContext.Progress.WriteLine($"sign test - {algorithm}");
+            TestContext.Progress.WriteLine($"sign test - {algorithm.ToText()}");
             for (int i = 0; i < 20; i++)
             {
                 Unit(algorithm);

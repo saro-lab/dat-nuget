@@ -6,7 +6,7 @@ public class CertificateTest
 {
     public void Unit(DatCertificate failCert, DatSignatureAlgorithm signatureAlgorithm, DatCryptoAlgorithm cryptoAlgorithm)
     {
-        string tag = "dat." + signatureAlgorithm.ToString() + "." + cryptoAlgorithm.ToString();
+        string tag = signatureAlgorithm.ToText() + " " + cryptoAlgorithm.ToText();
 
         string plain = DatUtils.GenerateRandomBase62(30);
         string secure = DatUtils.GenerateRandomBase62(30);
@@ -14,7 +14,7 @@ public class CertificateTest
         long id = (long)(Random.Shared.NextDouble() * long.MaxValue);
 
         DatCertificate newCert = Generate(id, signatureAlgorithm, cryptoAlgorithm);
-        string newCertStr = newCert.Exports(DatSignatureKeyExportOption.PAIR);
+        string newCertStr = newCert.Exports(false);
         DatCertificate readCert = DatCertificate.Parse(newCertStr);
         TestContext.Progress.WriteLine($"{tag} CERT: {newCertStr}");
 
@@ -23,8 +23,8 @@ public class CertificateTest
 
         TestContext.Progress.WriteLine($"{tag}: {dat}");
 
-        DatPayload payload = DatManager.Parse(readCert, dat);
-        DatPayload payload2 = DatManager.Parse(readCert, dat2);
+        Payload payload = DatManager.Parse(readCert, dat);
+        Payload payload2 = DatManager.Parse(readCert, dat2);
 
         TestContext.Progress.WriteLine($"{tag}: {payload.Plain} / {payload.Secure}");
 
@@ -43,18 +43,18 @@ public class CertificateTest
         long now = Unixtime.Now();
         return DatCertificate.Generate(
             id,
-            signatureAlgorithm,
-            cryptoAlgorithm,
             now - 10,
-            now + 600,
-            60
+            600,
+            60,
+            signatureAlgorithm,
+            cryptoAlgorithm
         );
     }
 
     [Test]
     public void Test()
     {
-        var failCert = Generate((long)(Random.Shared.NextDouble() * long.MaxValue), DatSignatureAlgorithm.P256, DatCryptoAlgorithm.AES128GCMN);
+        var failCert = Generate((long)(Random.Shared.NextDouble() * long.MaxValue), DatSignatureAlgorithm.EcdsaP256, DatCryptoAlgorithm.IvAes128Gcm);
 
         foreach (DatSignatureAlgorithm signatureAlgorithm in Enum.GetValues<DatSignatureAlgorithm>())
         {
