@@ -138,6 +138,7 @@ public class DatSignatureEcdsa : IDatSignature
 
     public DatSignatureAlgorithm Algorithm() => _algorithm;
     public bool Signable() => _hasPrivate;
+    public bool SupportVerifyOnly() => true;
     public object Clone() => FromKey(_algorithm, ExportKey());
     IDatSignature IDatSignature.Clone() => (IDatSignature)Clone();
 }

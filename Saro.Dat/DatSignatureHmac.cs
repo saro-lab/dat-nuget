@@ -62,6 +62,8 @@ public class DatSignatureHmac : IDatSignature
 
     public bool Signable() => true;
 
+    public bool SupportVerifyOnly() => false;
+
     public object Clone() => new DatSignatureHmac(_algorithm, (byte[])_key.Clone());
 
     IDatSignature IDatSignature.Clone() => (IDatSignature)Clone();

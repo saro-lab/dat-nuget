@@ -7,6 +7,7 @@ public interface IDatSignature : ICloneable
     byte[] Sign(byte[] body);
     byte[] ExportKey(bool verifyOnly = false);
     bool Signable();
+    bool SupportVerifyOnly();
     new IDatSignature Clone();
 
     public static IDatSignature FromKey(DatSignatureAlgorithm algorithm, byte[] key)
