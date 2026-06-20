@@ -11,7 +11,7 @@ public class SignatureTest
         var signatureKeyFail = IDatSignature.Generate(alg);
 
         var allKeyBytes = signatureKey.ExportKey(false);
-        var verifyingKeyBytes = signatureKey.ExportKey(true);
+        var verifyingKeyBytes = signatureKey.ExportKey(signatureKey.SupportVerifyOnly());
 
         var signatureKeyFrom = IDatSignature.FromKey(alg, allKeyBytes);
         var verifyKeyFrom = IDatSignature.FromKey(alg, verifyingKeyBytes);

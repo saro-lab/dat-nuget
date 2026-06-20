@@ -58,7 +58,14 @@ public class DatSignatureHmac : IDatSignature
         }
     }
 
-    public byte[] ExportKey(bool verifyOnly = false) => _key;
+    public byte[] ExportKey(bool verifyOnly = false)
+    {
+        if (verifyOnly)
+        {
+            throw new DatException("Hmac is not supported for verifyOnly");
+        }
+        return _key;
+    }
 
     public bool Signable() => true;
 

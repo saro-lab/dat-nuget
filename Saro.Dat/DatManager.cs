@@ -101,7 +101,7 @@ public class DatManager
                 list = existing.Where(c => !c.Expired).ToList();
             }
 
-            _certificates = list.OrderBy(c => c.IssueEnd).ToList();
+            _certificates = list.OrderBy(c => c.DatIssuanceEndSeconds).ToList();
             _issuer = _certificates.LastOrDefault(c => c.Issuable)?.Clone() as DatCertificate;
         }
         finally { _lock.ExitWriteLock(); }
@@ -112,7 +112,7 @@ public class DatManager
         using var ms = new MemoryStream();
 
         // expire
-        long expire = Unixtime.Now() + certificate.Ttl;
+        long expire = Unixtime.Now() + certificate.DatTtlSeconds;
         ms.Write(Encoding.UTF8.GetBytes(expire.ToString()));
         ms.WriteByte((byte)'.');
 

@@ -63,5 +63,12 @@ f000000000000000.0.32506362000.32506358400.ECDSA-P521.IV-AES256-GCM.BACwvrucwjh5
             TestContext.Progress.WriteLine($"PASS {dat}");
             TestContext.Progress.WriteLine($"PASS {payload.ToUnsafeString()}");
         }
+
+		var newDat = manager.Issue(plain, secure);
+        var newPayload = manager.Parse(newDat);
+
+		Assert.That(newPayload.Plain, Is.EqualTo(plain));
+		Assert.That(newPayload.Secure, Is.EqualTo(secure));
+        TestContext.Progress.WriteLine($"PASS DAT {newDat}");
     }
 }

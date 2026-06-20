@@ -5,31 +5,31 @@ public class DatCertificate : ICloneable
     public long Cid { get; }
     internal IDatSignature Signature { get; }
     internal IDatCrypto Crypto { get; }
-    public long IssueBegin { get; }
-    public long IssueEnd { get; }
-    public long Ttl { get; }
+    public long DatIssuanceStartSeconds { get; }
+    public long DatIssuanceEndSeconds { get; }
+    public long DatTtlSeconds { get; }
 
-    private DatCertificate(long cid, IDatSignature sk, IDatCrypto ck, long ib, long ie, long ttl)
+    private DatCertificate(long cid, IDatSignature signature, IDatCrypto crypt, long ib, long ie, long datTtlSeconds)
     {
         Cid = cid;
-        Signature = sk;
-        Crypto = ck;
-        IssueBegin = ib;
-        IssueEnd = ie;
-        Ttl = ttl;
+        Signature = signature;
+        Crypto = crypt;
+        DatIssuanceStartSeconds = ib;
+        DatIssuanceEndSeconds = ie;
+        DatTtlSeconds = datTtlSeconds;
     }
 
-    public bool Expired => IssueEnd + Ttl < Unixtime.Now();
-    public bool Issuable => Signature.Signable() && Unixtime.Now() >= IssueBegin && Unixtime.Now() <= IssueEnd;
+    public bool Expired => DatIssuanceEndSeconds + DatTtlSeconds < Unixtime.Now();
+    public bool Issuable => Signature.Signable() && Unixtime.Now() >= DatIssuanceStartSeconds && Unixtime.Now() <= DatIssuanceEndSeconds;
 
     public string Exports(bool verifyOnly = false)
     {
-        return $"{Cid:x}.{IssueBegin}.{IssueEnd - IssueBegin}.{Ttl}.{Signature.Algorithm().ToText()}.{Crypto.Algorithm().ToText()}.{DatUtils.EncodeBase64Url(Signature.ExportKey(verifyOnly))}.{DatUtils.EncodeBase64Url(Crypto.ToBytes())}";
+        return $"{Cid:x}.{DatIssuanceStartSeconds}.{DatIssuanceEndSeconds - DatIssuanceStartSeconds}.{DatTtlSeconds}.{Signature.Algorithm().ToText()}.{Crypto.Algorithm().ToText()}.{DatUtils.EncodeBase64Url(Signature.ExportKey(verifyOnly))}.{DatUtils.EncodeBase64Url(Crypto.ToBytes())}";
     }
 
     public override string ToString() => Exports(false);
 
-    public object Clone() => new DatCertificate(Cid, Signature.Clone(), Crypto.Clone(), IssueBegin, IssueEnd, Ttl);
+    public object Clone() => new DatCertificate(Cid, Signature.Clone(), Crypto.Clone(), DatIssuanceStartSeconds, DatIssuanceEndSeconds, DatTtlSeconds);
 
     public override bool Equals(object? obj)
     {
@@ -39,28 +39,24 @@ public class DatCertificate : ICloneable
 
     public override int GetHashCode() => Cid.GetHashCode();
 
-    public static DatCertificate Generate(long cid, long issuedAt, long issuanceDuration, long datTtl, DatSignatureAlgorithm sa, DatCryptoAlgorithm ca)
+    public static DatCertificate Generate(long cid, long datIssuanceStartSeconds, long datIssuanceDurationSeconds, long datTtlSeconds, DatSignatureAlgorithm sa, DatCryptoAlgorithm ca)
     {
         return New(
             cid,
-            issuedAt,
-            issuanceDuration,
-            datTtl,
+            datIssuanceStartSeconds,
+            datIssuanceDurationSeconds,
+            datTtlSeconds,
             IDatSignature.Generate(sa),
             IDatCrypto.Generate(ca)
         );
     }
 
-    public static DatCertificate New(long cid, long issuedAt, long issuanceDuration, long datTtl, IDatSignature sk, IDatCrypto ck)
+    public static DatCertificate New(long cid, long datIssuanceStartSeconds, long datIssuanceDurationSeconds, long datTtlSeconds, IDatSignature sk, IDatCrypto ck)
     {
-        if (issuedAt < 0) throw new DatException("issuedAt must >= 0");
-        if (datTtl < 1) throw new DatException("datTtl must > 0");
-        // Kotlin logic: if (issuanceDuration < (datTtl * 2UL) && issuanceDuration < (datTtl + 3600UL))
-        if (issuanceDuration < (datTtl * 2) && issuanceDuration < (datTtl + 3600))
-        {
-            throw new DatException("issuanceDuration must > (datTtl * 2) or (datTtl + 3600)");
-        }
-        return new DatCertificate(cid, sk, ck, issuedAt, issuedAt + issuanceDuration, datTtl);
+        if (datIssuanceStartSeconds < 0) throw new DatException("datIssuanceStartSeconds must >= 0");
+        if (datTtlSeconds < 1) throw new DatException("datTtlSeconds must > 0");
+        if (datIssuanceDurationSeconds < 1) throw new DatException("datIssuanceDurationSeconds must > 0");
+        return new DatCertificate(cid, sk, ck, datIssuanceStartSeconds, datIssuanceStartSeconds + datIssuanceDurationSeconds, datTtlSeconds);
     }
 
     public static DatCertificate Parse(string format)
@@ -71,18 +67,18 @@ public class DatCertificate : ICloneable
             if (p.Length == 8)
             {
                 long cid = Convert.ToInt64(p[0], 16);
-                long issuedAt = long.Parse(p[1]);
-                long issuanceDuration = long.Parse(p[2]);
-                long datTtl = long.Parse(p[3]);
-                var sigAlg = DatSignatureAlgorithmExtensions.FromText(p[4]);
-                var cryAlg = DatCryptoAlgorithmExtensions.FromText(p[5]);
-                var sigKey = IDatSignature.FromKey(sigAlg, DatUtils.DecodeBase64Url(p[6]));
-                var cryKey = IDatCrypto.FromBytes(cryAlg, DatUtils.DecodeBase64Url(p[7]));
+                long datIssuanceStartSeconds = long.Parse(p[1]);
+                long datIssuanceDurationSeconds = long.Parse(p[2]);
+                long datTtlSeconds = long.Parse(p[3]);
+                var signatureAlgorithm = DatSignatureAlgorithmExtensions.FromText(p[4]);
+                var cryptAlgorithm = DatCryptoAlgorithmExtensions.FromText(p[5]);
+                var signatureKey = IDatSignature.FromKey(signatureAlgorithm, DatUtils.DecodeBase64Url(p[6]));
+                var cryptoKey = IDatCrypto.FromBytes(cryptAlgorithm, DatUtils.DecodeBase64Url(p[7]));
 
-                return New(cid, issuedAt, issuanceDuration, datTtl, sigKey, cryKey);
+                return New(cid, datIssuanceStartSeconds, datIssuanceDurationSeconds, datTtlSeconds, signatureKey, cryptoKey);
             }
         }
-        catch (System.Exception e)
+        catch (Exception e)
         {
             if (e is DatException) throw;
         }
