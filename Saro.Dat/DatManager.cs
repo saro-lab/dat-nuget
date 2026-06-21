@@ -70,18 +70,20 @@ public class DatManager
         finally { _lock.ExitReadLock(); }
     }
 
-    public void Imports(string format, bool clear)
+    public int Imports(string format, bool clear)
     {
         var certs = string.IsNullOrWhiteSpace(format)
             ? new List<DatCertificate>()
             : format.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(DatCertificate.Parse).ToList();
-        Imports(certs, clear);
+        return Imports(certs, clear);
     }
 
-    public void Imports(List<DatCertificate> certs, bool clear)
+    public int Imports(List<DatCertificate> certs, bool clear)
     {
         if (certs.Count != certs.Select(c => c.Cid).Distinct().Count())
             throw new ArgumentException("Duplicate CID(Certificate ID)");
+
+        var renewCount = 0;
 
         _lock.EnterWriteLock();
         try
@@ -90,13 +92,18 @@ public class DatManager
             if (clear)
             {
                 list = certs.Where(c => !c.Expired).ToList();
+                renewCount = list.Count;
             }
             else
             {
                 var existing = _certificates.Select(c => (DatCertificate)c.Clone()).ToList();
                 foreach (var nc in certs)
                 {
-                    if (!existing.Contains(nc)) existing.Add(nc);
+                    if (!existing.Contains(nc))
+                    {
+                        existing.Add(nc);
+                        renewCount++;
+                    }
                 }
                 list = existing.Where(c => !c.Expired).ToList();
             }
@@ -105,6 +112,8 @@ public class DatManager
             _issuer = _certificates.LastOrDefault(c => c.Issuable)?.Clone() as DatCertificate;
         }
         finally { _lock.ExitWriteLock(); }
+
+        return renewCount;
     }
 
     public static string Issue(DatCertificate certificate, byte[] plain, byte[] secure)
