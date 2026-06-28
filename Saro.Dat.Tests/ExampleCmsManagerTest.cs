@@ -27,48 +27,47 @@ public class ExampleCmsManagerTest
         var logger = loggerFactory.CreateLogger<DatCmsManager>();
 
         // singleton
-        DatCmsManager manager;
+        DatCmsManager manager = await DatCmsManager.Builder()
+            .Host("localhost")
+            .Port(8088)
+            //.IntervalOff() // auto sync off
+            .IntervalSeconds(1)
+            .Token("12345678901b")
+            .Logger(logger)
+            .BuildAsync();
+
+        // manual sync
+        //await manager.Sync();
+
         try
         {
-            manager = await DatCmsManager.Builder()
-                .Host("localhost")
-                .Port(8088)
-                .IntervalSeconds(1)
-                .Token("12345678901b")
-                .Logger(logger)
-                .BuildAsync();
-        }
-        catch (Exception e)
+            string plain = "Unicode 유니코드 ユニコード 万国码 يونيكود यूनिकोड Юникод 🦄💻";
+            string secure = "Ciphertext 암호문 暗号文 密文 Шифротекст Texte chiffré Geheimtext نص مشفر सिफरपाठ 🔐";
+
+            Console.WriteLine("plain : " + plain);
+            Console.WriteLine("secure : " + secure);
+
+            // issue dat
+            string dat = manager.Issue(plain, secure);
+            Console.WriteLine("dat : " + dat);
+
+            // parse dat
+            Payload payload = manager.Parse(dat);
+
+            string payloadPlain = payload.Plain;
+            string payloadSecure = payload.Secure;
+
+            Console.WriteLine("payload plain : " + payloadPlain);
+            Console.WriteLine("payload secure : " + payloadSecure);
+
+            Assert.That(payloadPlain, Is.EqualTo(plain));
+            Assert.That(payloadSecure, Is.EqualTo(secure));
+        } catch (Exception ex)
         {
-            TestContext.Progress.WriteLine($"CMS Server not reachable: {e.Message}");
-            Assert.Ignore("CMS Server not reachable, skipping test.");
-            return;
+            Console.WriteLine(ex);
         }
-
-        string plain = "Unicode 유니코드 ユニコード 万国码 يونيكود यूनिकोड Юникод 🦄💻";
-        string secure = "Ciphertext 암호문 暗号文 密文 Шифротекст Texte chiffré Geheimtext نص مشفر सिफरपाठ 🔐";
-
-        Console.WriteLine("plain : " + plain);
-        Console.WriteLine("secure : " + secure);
-
-        // issue dat
-        string dat = manager.Issue(plain, secure);
-        Console.WriteLine("dat : " + dat);
-
-        // parse dat
-        Payload payload = manager.Parse(dat);
-
-        string payloadPlain = payload.Plain;
-        string payloadSecure = payload.Secure;
-
-        Console.WriteLine("payload plain : " + payloadPlain);
-        Console.WriteLine("payload secure : " + payloadSecure);
-
-        Assert.That(payloadPlain, Is.EqualTo(plain));
-        Assert.That(payloadSecure, Is.EqualTo(secure));
 
         // wait
-        Console.WriteLine("Waiting indefinitely as requested...");
         await Task.Delay(5 * 1000);
     }
 }

@@ -20,15 +20,15 @@ public class ExampleTest
 
         datManager.Imports(new List<DatCertificate> { cert }, false);
 
-        string examplePlain = "plain text = 평문";
-        string exampleSecure = "secure = 암호문";
+        string plain = "Unicode 유니코드 ユニコード 万国码 يونيكود यूनिकोड Юникод 🦄💻";
+        string secure = "Ciphertext 암호문 暗号文 密文 Шифротекст Texte chiffré Geheimtext نص مشفر सिफरपाठ 🔐";
 
-        string dat = datManager.Issue(examplePlain, exampleSecure);
+        string dat = datManager.Issue(plain, secure);
 
         Payload payload = datManager.Parse(dat);
 
-        Assert.That(payload.Plain, Is.EqualTo(examplePlain));
-        Assert.That(payload.Secure, Is.EqualTo(exampleSecure));
+        Assert.That(payload.Plain, Is.EqualTo(plain));
+        Assert.That(payload.Secure, Is.EqualTo(secure));
 
         TestContext.Progress.WriteLine($"PARSE DAT: {dat}");
         TestContext.Progress.WriteLine($"plain: {payload.Plain}");

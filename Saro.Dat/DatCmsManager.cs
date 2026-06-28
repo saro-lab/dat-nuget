@@ -54,7 +54,7 @@ public class DatCmsManager : IDisposable
         {
             while (await _timer.WaitForNextTickAsync(_cts.Token))
             {
-                await SyncAsync();
+                await Sync();
             }
         }
         catch (OperationCanceledException)
@@ -63,11 +63,12 @@ public class DatCmsManager : IDisposable
         }
         catch (Exception e)
         {
-            _logger?.LogError(e, "DAT CMS Sync Loop Exception");
+            string msg = e.Message;
+            _logger?.LogError("DAT CMS Sync Loop Exception {msg}", msg);
         }
     }
 
-    public async Task SyncAsync()
+    public async Task Sync()
     {
         if (!await _lock.WaitAsync(0))
         {
@@ -109,7 +110,8 @@ public class DatCmsManager : IDisposable
         }
         catch (Exception e)
         {
-            _logger?.LogError(e, "[Exception] DAT SMS Sync {Url}", newUrl);
+            string msg = e.Message;
+            _logger?.LogError("[Exception] DAT SMS Sync {Url}: {msg}", newUrl, msg);
         }
         finally
         {
@@ -180,6 +182,12 @@ public class DatCmsManager : IDisposable
             return this;
         }
 
+        public DatCmsManagerBuilder IntervalOff()
+        {
+            _intervalSeconds = 0;
+            return this;
+        }
+
         public DatCmsManagerBuilder Logger(ILogger? logger)
         {
             _logger = logger;
@@ -203,7 +211,7 @@ public class DatCmsManager : IDisposable
             var manager = DatManager.NewInstance();
             var cms = new DatCmsManager(uriStr, _token, 0, manager, _client, _intervalSeconds, _logger);
 
-            await cms.SyncAsync();
+            await cms.Sync();
 
             return cms;
         }
